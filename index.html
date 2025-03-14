@@ -5,9 +5,52 @@
     <style>
         body { margin: 0; }
         canvas { display: block; }
+        .legend {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .legend h2 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .legend p {
+            margin: 5px 0;
+        }
+        .red-text {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        kbd {
+            background-color: #f7f7f7;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+            color: #333;
+            display: inline-block;
+            font-size: 12px;
+            padding: 2px 6px;
+            margin: 0 2px;
+        }
     </style>
 </head>
 <body>
+    <div class="legend">
+        <h2>2D Car Simulator for Fast-LIO SLAM</h2>
+        <p>Controls:</p>
+        <p><kbd>Up Arrow</kbd> - Move Forward</p>
+        <p><kbd>Down Arrow</kbd> - Move Backward</p>
+        <p><kbd>Left Arrow</kbd> - Turn Left</p>
+        <p><kbd>Right Arrow</kbd> - Turn Right</p>
+        <p>Note: The <span class="red-text">red</span> part is the front of the car</p>
+    </div>
     <script type="module" src="main.js"></script>
 </body>
 </html> 
