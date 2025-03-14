@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "dev": "vite"
+    "dev": "vite",
+    "build": "vite build"
   },
   "name": "fastlio-frontend",
   "version": "1.0.0",
