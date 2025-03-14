@@ -15,12 +15,24 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Car geometry - make the length (z) longer than width (x) to represent car correctly
-const carGeometry = new THREE.BoxGeometry(0.4, 0.01, 0.8); // Width: 0.4, Height: 0.01, Length: 0.8
-const carMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black color
-const car = new THREE.Mesh(carGeometry, carMaterial);
-// Rotate the car 90 degrees so it moves perpendicular to its shorter side
-// car.rotation.y = Math.PI / 2;
+// Car geometry - create two halves of the car
+const frontGeometry = new THREE.BoxGeometry(0.4, 0.01, 0.4); // Front half
+const backGeometry = new THREE.BoxGeometry(0.4, 0.01, 0.4);  // Back half
+const frontMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color
+const backMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black color
+
+// Create front and back meshes
+const frontHalf = new THREE.Mesh(frontGeometry, frontMaterial);
+const backHalf = new THREE.Mesh(backGeometry, backMaterial);
+
+// Position the halves
+frontHalf.position.z = -0.2; // Move front half forward
+backHalf.position.z = 0.2;   // Move back half backward
+
+// Create a group to hold both halves
+const car = new THREE.Group();
+car.add(frontHalf);
+car.add(backHalf);
 scene.add(car);
 
 // Car movement variables
