@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "dev": "vite"
+  },
+  "name": "fastlio-frontend",
+  "version": "1.0.0",
+  "main": "main.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "three": "^0.174.0"
+  },
+  "devDependencies": {
+    "vite": "^6.2.2"
+  }
+}
