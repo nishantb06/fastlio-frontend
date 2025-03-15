@@ -43,20 +43,29 @@ let moveBackward = false;
 let turnLeft = false;
 let turnRight = false;
 
+// Add these variables at the top level
+const API_URL = 'http://localhost:8000';
+let lastUpdateTime = 0;
+const UPDATE_INTERVAL = 16; // approximately 60fps
+
 // Handle keyboard controls
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
         case 'ArrowUp':
             moveForward = true;
+            updateRobotState('ArrowUp', 'keydown');
             break;
         case 'ArrowDown':
             moveBackward = true;
+            updateRobotState('ArrowDown', 'keydown');
             break;
         case 'ArrowLeft':
             turnLeft = true;
+            updateRobotState('ArrowLeft', 'keydown');
             break;
         case 'ArrowRight':
             turnRight = true;
+            updateRobotState('ArrowRight', 'keydown');
             break;
     }
 });
@@ -65,15 +74,19 @@ document.addEventListener('keyup', (event) => {
     switch (event.key) {
         case 'ArrowUp':
             moveForward = false;
+            updateRobotState('ArrowUp', 'keyup');
             break;
         case 'ArrowDown':
             moveBackward = false;
+            updateRobotState('ArrowDown', 'keyup');
             break;
         case 'ArrowLeft':
             turnLeft = false;
+            updateRobotState('ArrowLeft', 'keyup');
             break;
         case 'ArrowRight':
             turnRight = false;
+            updateRobotState('ArrowRight', 'keyup');
             break;
     }
 });
@@ -81,24 +94,56 @@ document.addEventListener('keyup', (event) => {
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
+    
+    const currentTime = Date.now();
+    if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
+        // Only send update if there's active input
+        if (moveForward || moveBackward || turnLeft || turnRight) {
+            // Determine the active key
+            let activeKey = null;
+            if (moveForward) activeKey = 'ArrowUp';
+            else if (moveBackward) activeKey = 'ArrowDown';
+            if (turnLeft) activeKey = 'ArrowLeft';
+            else if (turnRight) activeKey = 'ArrowRight';
 
-    // Handle car movement - car moves in the direction of its length
-    if (moveForward) {
-        car.position.x -= Math.sin(car.rotation.y) * carSpeed;
-        car.position.z -= Math.cos(car.rotation.y) * carSpeed;
-    }
-    if (moveBackward) {
-        car.position.x += Math.sin(car.rotation.y) * carSpeed;
-        car.position.z += Math.cos(car.rotation.y) * carSpeed;
-    }
-    if (turnLeft) {
-        car.rotation.y += carRotationSpeed;
-    }
-    if (turnRight) {
-        car.rotation.y -= carRotationSpeed;
+            if (activeKey) {
+                updateRobotState(activeKey, 'keydown');
+            }
+        }
+        lastUpdateTime = currentTime;
     }
 
     renderer.render(scene, camera);
+}
+
+// Add this function to handle API calls
+async function updateRobotState(key, eventType) {
+    try {
+        const response = await fetch(`${API_URL}/update_robot`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                key: key,
+                type: eventType
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        
+        // Update car position and rotation
+        car.position.x = data.position[0];
+        car.position.z = data.position[1];  // Note: THREE.js uses z for depth
+        car.rotation.y = data.heading;
+        
+    } catch (error) {
+        console.error('Error updating robot state:', error);
+    }
 }
 
 // Handle window resizing
