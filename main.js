@@ -7,7 +7,7 @@ scene.background = new THREE.Color(0xffffff); // White background
 // Camera setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 // Move camera further up to get top-down 2D view
-camera.position.y = 10;
+camera.position.y = 15;
 camera.rotation.x = -Math.PI / 2;
 
 // Renderer setup
@@ -107,6 +107,29 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Add grid
+const size = 100; // Total size of the grid
+const divisions = size * 2; // Number of divisions (10x10 pixels each)
+const gridHelper = new THREE.GridHelper(size, divisions, 0x888888, 0x888888);
+gridHelper.material.opacity = 0.2;
+gridHelper.material.transparent = true;
+scene.add(gridHelper);
+
+// Add X and Z axes
+const axesGeometry = new THREE.BufferGeometry();
+const axesVertices = new Float32Array([
+    // X axis (red)
+    -size/2, 0, 0,
+    size/2, 0, 0,
+    // Z axis (blue)
+    0, 0, -size/2,
+    0, 0, size/2
+]);
+axesGeometry.setAttribute('position', new THREE.BufferAttribute(axesVertices, 3));
+const axesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+const axes = new THREE.LineSegments(axesGeometry, axesMaterial);
+scene.add(axes);
 
 // Start the animation
 animate(); 
