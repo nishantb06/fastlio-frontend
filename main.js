@@ -49,6 +49,12 @@ const API_URL = 'http://localhost:8000';
 let lastUpdateTime = 0;
 const UPDATE_INTERVAL = 16; // approximately 60fps
 
+// Add state tracking to the frontend
+let currentState = {
+    position: [0, 0],
+    heading: Math.PI/2  // Match initial heading from backend
+};
+
 // Handle keyboard controls
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
@@ -111,7 +117,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Add this function to handle API calls
+// Modify the updateRobotState function
 async function updateRobotState(key, eventType) {
     try {
         const response = await fetch(`${API_URL}/update_robot`, {
@@ -121,7 +127,11 @@ async function updateRobotState(key, eventType) {
             },
             body: JSON.stringify({
                 key: key,
-                type: eventType
+                type: eventType,
+                current_state: {
+                    position: currentState.position,
+                    heading: currentState.heading
+                }
             })
         });
 
@@ -133,8 +143,13 @@ async function updateRobotState(key, eventType) {
         
         // Update car position and rotation
         car.position.x = data.position[0];
-        car.position.y = data.position[1];  // Note: THREE.js uses z for depth
+        car.position.y = data.position[1];
         car.rotation.z = data.heading;
+        
+        // Update our tracked state
+        currentState.position = data.position;
+        currentState.heading = data.heading;
+        
         console.log(data.position[0], data.position[1], data.heading);
     } catch (error) {
         console.error('Error updating robot state:', error);

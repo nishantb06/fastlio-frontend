@@ -16,14 +16,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class KeyEvent(BaseModel):
-    key: str
-    type: str  # 'keydown' or 'keyup'
-
 class RobotState(BaseModel):
     position: List[float]  # [x, y]
     heading: float  # theta
-    
+
+class KeyEvent(BaseModel):
+    key: str
+    type: str  # 'keydown' or 'keyup'
+    current_state: RobotState
+
 class DifferentialDrive:
     max_v = 2.0
     max_omega = 2.0
@@ -87,6 +88,11 @@ robot = DifferentialDrive()
 
 @app.post("/update_robot")
 async def update_robot(key_event: KeyEvent):
+    # Update robot state from frontend
+    robot.x[0] = key_event.current_state.position[0]
+    robot.x[1] = key_event.current_state.position[1]
+    robot.x[2] = key_event.current_state.heading
+    
     robot.update_controls(key_event)
     robot.move_step(dt=0.016)  # Approximately 60fps
     
