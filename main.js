@@ -7,8 +7,8 @@ scene.background = new THREE.Color(0xffffff); // White background
 // Camera setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 // Move camera further up to get top-down 2D view
-camera.position.y = 15;
-camera.rotation.x = -Math.PI / 2;
+camera.position.z = 15;
+// camera.rotation.z = -Math.PI / 2;
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer();
@@ -16,8 +16,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Car geometry - create two halves of the car
-const frontGeometry = new THREE.BoxGeometry(0.4, 0.01, 0.4); // Front half
-const backGeometry = new THREE.BoxGeometry(0.4, 0.01, 0.4);  // Back half
+const frontGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.01); // Front half
+const backGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.01);  // Back half
 const frontMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color
 const backMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black color
 
@@ -26,13 +26,14 @@ const frontHalf = new THREE.Mesh(frontGeometry, frontMaterial);
 const backHalf = new THREE.Mesh(backGeometry, backMaterial);
 
 // Position the halves
-frontHalf.position.z = -0.2; // Move front half forward
-backHalf.position.z = 0.2;   // Move back half backward
+frontHalf.position.x = 0.2; // Move front half forward
+backHalf.position.x = -0.2;   // Move back half backward
 
 // Create a group to hold both halves
 const car = new THREE.Group();
 car.add(frontHalf);
 car.add(backHalf);
+car.rotation.z = Math.PI / 2;
 scene.add(car);
 
 // Car movement variables
@@ -94,24 +95,18 @@ document.addEventListener('keyup', (event) => {
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
-    
-    const currentTime = Date.now();
-    if (currentTime - lastUpdateTime >= UPDATE_INTERVAL) {
-        // Only send update if there's active input
-        if (moveForward || moveBackward || turnLeft || turnRight) {
-            // Determine the active key
-            let activeKey = null;
-            if (moveForward) activeKey = 'ArrowUp';
-            else if (moveBackward) activeKey = 'ArrowDown';
-            if (turnLeft) activeKey = 'ArrowLeft';
-            else if (turnRight) activeKey = 'ArrowRight';
+    if (moveForward || moveBackward || turnLeft || turnRight) {
 
-            if (activeKey) {
-                updateRobotState(activeKey, 'keydown');
-            }
+        let activeKey = null;
+        if (moveForward) activeKey = 'ArrowUp';
+        else if (moveBackward) activeKey = 'ArrowDown';
+        if (turnLeft) activeKey = 'ArrowLeft';
+        else if (turnRight) activeKey = 'ArrowRight';
+        if (activeKey) {
+            updateRobotState(activeKey, 'keydown');
         }
-        lastUpdateTime = currentTime;
     }
+
 
     renderer.render(scene, camera);
 }
@@ -138,9 +133,9 @@ async function updateRobotState(key, eventType) {
         
         // Update car position and rotation
         car.position.x = data.position[0];
-        car.position.z = data.position[1];  // Note: THREE.js uses z for depth
-        car.rotation.y = data.heading;
-        
+        car.position.y = data.position[1];  // Note: THREE.js uses z for depth
+        car.rotation.z = data.heading;
+        console.log(data.position[0], data.position[1], data.heading);
     } catch (error) {
         console.error('Error updating robot state:', error);
     }
@@ -159,6 +154,7 @@ const divisions = size * 2; // Number of divisions (10x10 pixels each)
 const gridHelper = new THREE.GridHelper(size, divisions, 0x888888, 0x888888);
 gridHelper.material.opacity = 0.2;
 gridHelper.material.transparent = true;
+gridHelper.rotation.x = -Math.PI / 2;
 scene.add(gridHelper);
 
 // Add X and Z axes
@@ -167,9 +163,9 @@ const axesVertices = new Float32Array([
     // X axis (red)
     -size/2, 0, 0,
     size/2, 0, 0,
-    // Z axis (blue)
-    0, 0, -size/2,
-    0, 0, size/2
+    // y axis (blue)
+    0, -size/2, 0,
+    0, size/2, 0,
 ]);
 axesGeometry.setAttribute('position', new THREE.BufferAttribute(axesVertices, 3));
 const axesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });

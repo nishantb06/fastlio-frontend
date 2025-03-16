@@ -29,7 +29,7 @@ class DifferentialDrive:
     max_omega = 2.0
     
     def __init__(self):
-        self.x = np.array([0.0, 0.0, 0.0])  # [x, y, theta]
+        self.x = np.array([0.0, 0.0, np.pi/2])  # [x, y, theta]
         self.u = np.array([0.0, 0.0])  # [v, omega]
         
     def EOM(self, t, y):
@@ -41,8 +41,8 @@ class DifferentialDrive:
         # Fix the equations to properly use heading
         # The car should move in the direction it's pointing
         # x' = v*cos(theta), y' = v*sin(theta)
-        ydot[0] = -v * np.sin(theta)  # x velocity
-        ydot[1] = -v * np.cos(theta)  # y velocity
+        ydot[0] = v * np.cos(theta)  # x velocity
+        ydot[1] = v * np.sin(theta)  # y velocity
         ydot[2] = omega              # angular velocity (theta')
         ydot[3] = 0                  # v' = 0 (constant velocity)
         ydot[4] = 0                  # omega' = 0 (constant angular velocity)
