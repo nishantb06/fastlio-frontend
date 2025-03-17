@@ -33,6 +33,33 @@ backHalf.position.x = -0.2;   // Move back half backward
 const car = new THREE.Group();
 car.add(frontHalf);
 car.add(backHalf);
+
+// Create an ellipse around the car
+function createEllipse(radiusX, radiusY) {
+    const curve = new THREE.EllipseCurve(
+        0, 0,            // Center x, y
+        radiusX, radiusY,// xRadius, yRadius
+        0, 2 * Math.PI,  // startAngle, endAngle
+        false,           // clockwise
+        0                // rotation
+    );
+
+    const points = curve.getPoints(50);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color: 0x0000ff }); // Blue color
+    const ellipse = new THREE.Line(geometry, material);
+    
+    // No rotation applied - ellipse is already in XY plane
+    // Points from EllipseCurve are in the XY plane by default
+    
+    return ellipse;
+}
+
+// Create the ellipse with fixed dimensions
+const ellipse = createEllipse(1.2, 0.8); // Arbitrary fixed values
+car.add(ellipse); // Add the ellipse to the car group
+
+// Set the car's initial rotation
 car.rotation.z = Math.PI / 2;
 scene.add(car);
 
@@ -140,7 +167,6 @@ function animate() {
         }
     }
 
-
     renderer.render(scene, camera);
 }
 
@@ -224,4 +250,4 @@ const axes = new THREE.LineSegments(axesGeometry, axesMaterial);
 scene.add(axes);
 
 // Start the animation
-animate(); 
+animate();
