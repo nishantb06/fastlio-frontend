@@ -49,11 +49,38 @@ const API_URL = 'http://localhost:8000';
 let lastUpdateTime = 0;
 const UPDATE_INTERVAL = 16; // approximately 60fps
 
-// Add state tracking to the frontend
+// Add state tracking variables at the top level
+const n_state = 3;
+const n_landmarks = 1;
 let currentState = {
     position: [0, 0],
-    heading: Math.PI/2  // Match initial heading from backend
+    heading: Math.PI/2,
+    mu: null,
+    sigma: null
 };
+
+// Initialize mu and sigma before animation loop
+function initializeEKFState() {
+    // Initialize mu (state estimate)
+    currentState.mu = new Array(n_state + 2*n_landmarks).fill(0);
+    currentState.mu[0] = 0;          // x position
+    currentState.mu[1] = 0;          // y position
+    currentState.mu[2] = Math.PI/2;  // heading
+
+    // Initialize sigma (covariance matrix)
+    currentState.sigma = Array(n_state + 2*n_landmarks).fill().map(() => 
+        Array(n_state + 2*n_landmarks).fill(0)
+    );
+    
+    // Set initial covariance for robot state
+    for(let i = 0; i < 3; i++) {
+        currentState.sigma[i][i] = 0.1;
+    }
+    currentState.sigma[2][2] = 0;  // Zero uncertainty in heading
+}
+
+// Call initialization before animation loop
+initializeEKFState();
 
 // Handle keyboard controls
 document.addEventListener('keydown', (event) => {
@@ -117,7 +144,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Modify the updateRobotState function
+// Modify the updateRobotState function to handle mu and sigma
 async function updateRobotState(key, eventType) {
     try {
         const response = await fetch(`${API_URL}/update_robot`, {
@@ -130,7 +157,9 @@ async function updateRobotState(key, eventType) {
                 type: eventType,
                 current_state: {
                     position: currentState.position,
-                    heading: currentState.heading
+                    heading: currentState.heading,
+                    mu: currentState.mu,
+                    sigma: currentState.sigma
                 }
             })
         });
@@ -146,11 +175,18 @@ async function updateRobotState(key, eventType) {
         car.position.y = data.position[1];
         car.rotation.z = data.heading;
         
-        // Update our tracked state
+        // Update our tracked state including mu and sigma
         currentState.position = data.position;
         currentState.heading = data.heading;
+        currentState.mu = data.mu;
+        currentState.sigma = data.sigma;
         
-        console.log(data.position[0], data.position[1], data.heading);
+        console.log('Updated State:', {
+            position: data.position,
+            heading: data.heading,
+            mu: data.mu.slice(0, 3),  // Log only robot state part
+            sigma: data.sigma.slice(0, 3).map(row => row.slice(0, 3))  // Log only robot state covariance
+        });
     } catch (error) {
         console.error('Error updating robot state:', error);
     }

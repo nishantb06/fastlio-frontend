@@ -19,9 +19,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---> Robot Parameters
+n_state = 3 # Number of state variables
+n_landmarks = 1 # Number of landmarks
+
+# ---> EKF Estimation Variables
+mu = np.zeros((n_state+2*n_landmarks,1)) # State estimate (robot pose and landmark positions)
+sigma = np.zeros((n_state+2*n_landmarks,n_state+2*n_landmarks)) # State uncertainty, covariance matrix
+
+# ---> Helpful matrix
+Fx = np.block([[np.eye(3),np.zeros((n_state,2*n_landmarks))]]) # Used in both prediction and measurement updates
+
+def prediction_update(mu, sigma, u, dt):
+    rx,py,theta = mu[0],mu[1],mu[2]
+    v,w = u[0],u[1]
+    # Update state estimate mu with model
+    state_model_mat = np.zeros((n_state,1)) # Initialize state update matrix from model
+    state_model_mat[0] = -(v/w)*np.sin(theta)+(v/w)*np.sin(theta+w*dt) if w>0.01 else v*np.cos(theta)*dt # Update in the robot x position
+    state_model_mat[1] = (v/w)*np.cos(theta)-(v/w)*np.cos(theta+w*dt) if w>0.01 else v*np.sin(theta)*dt # Update in the robot y position
+    state_model_mat[2] = w*dt # Update for robot heading theta
+    mu = mu + np.matmul(np.transpose(Fx),state_model_mat) # Update state estimate, simple use model with current state estimate
+
+    return mu,sigma
+
+def measurement_update(mu, sigma, z, R):
+    return mu,sigma
 class RobotState(BaseModel):
     position: List[float]  # [x, y]
     heading: float  # theta
+    mu: List[float]  # State estimate
+    sigma: List[List[float]]  # Covariance matrix
 
 class KeyEvent(BaseModel):
     key: str
@@ -96,10 +123,20 @@ async def update_robot(key_event: KeyEvent):
     robot.x[1] = key_event.current_state.position[1]
     robot.x[2] = key_event.current_state.heading
     
+    # Convert mu and sigma from frontend format to numpy arrays
+    mu = np.array(key_event.current_state.mu).reshape(-1, 1)
+    sigma = np.array(key_event.current_state.sigma)
+    
     robot.update_controls(key_event)
     robot.move_step(dt=0.016)  # Approximately 60fps
-    
+
+    # Prediction Update
+    mu, sigma = prediction_update(mu, sigma, robot.u, 0.016)
+    print(mu)
+    print(sigma)
     return RobotState(
         position=[float(robot.x[0]), float(robot.x[1])],
-        heading=float(robot.x[2])
+        heading=float(robot.x[2]),
+        mu=mu.flatten().tolist(),  # Convert numpy array to list for JSON serialization
+        sigma=sigma.tolist()
     )
