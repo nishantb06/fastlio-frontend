@@ -7,10 +7,13 @@ from typing import List, Optional
 
 app = FastAPI()
 
-# Enable CORS
+# Update CORS settings for your Amplify domain
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://your-amplify-domain.amplifyapp.com",  # Replace with your domain
+        "http://localhost:5173",  # For local development
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
