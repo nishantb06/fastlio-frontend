@@ -23,6 +23,10 @@ app.add_middleware(
 n_state = 3 # Number of state variables
 n_landmarks = 1 # Number of landmarks
 
+# ---> Noise parameters
+R = np.diag([0.002,0.002,0.0005]) # sigma_x, sigma_y, sigma_theta
+Q = np.diag([0.003,0.005]) # sigma_r, sigma_phi
+
 # ---> EKF Estimation Variables
 mu = np.zeros((n_state+2*n_landmarks,1)) # State estimate (robot pose and landmark positions)
 sigma = np.zeros((n_state+2*n_landmarks,n_state+2*n_landmarks)) # State uncertainty, covariance matrix
@@ -40,7 +44,21 @@ def prediction_update(mu, sigma, u, dt):
     state_model_mat[2] = w*dt # Update for robot heading theta
     mu = mu + np.matmul(np.transpose(Fx),state_model_mat) # Update state estimate, simple use model with current state estimate
 
+    # Update state uncertainty sigma
+    state_jacobian = np.zeros((3,3)) # Initialize model jacobian
+    state_jacobian[0,2] = (v/w)*np.cos(theta) - (v/w)*np.cos(theta+w*dt) if w>0.01 else -v*np.sin(theta)*dt # Jacobian element, how small changes in robot theta affect robot x
+    state_jacobian[1,2] = (v/w)*np.sin(theta) - (v/w)*np.sin(theta+w*dt) if w>0.01 else v*np.cos(theta)*dt # Jacobian element, how small changes in robot theta affect robot y
+    G = np.eye(sigma.shape[0]) + np.transpose(Fx).dot(state_jacobian).dot(Fx) # How the model transforms uncertainty
+    sigma = G.dot(sigma).dot(np.transpose(G)) + np.transpose(Fx).dot(R).dot(Fx) # Combine model effects and stochastic noise
     return mu,sigma
+
+def sigma2transform(sigma):
+    '''
+    Finds the transform for a covariance matrix, to be used for visualizing the uncertainty ellipse
+    '''
+    [eigenvals,eigenvecs] = np.linalg.eig(sigma) # Finding eigenvalues and eigenvectors of the covariance matrix
+    angle = 180.*np.arctan2(eigenvecs[1][0],eigenvecs[0][0])/np.pi # Find the angle of rotation for the first eigenvalue
+    return eigenvals, angle
 
 def measurement_update(mu, sigma, z, R):
     return mu,sigma
@@ -49,6 +67,8 @@ class RobotState(BaseModel):
     heading: float  # theta
     mu: List[float]  # State estimate
     sigma: List[List[float]]  # Covariance matrix
+    eigenvals: List[float]  # Eigenvalues for uncertainty ellipse
+    angle: float  # Angle of uncertainty ellipse
 
 class KeyEvent(BaseModel):
     key: str
@@ -132,11 +152,16 @@ async def update_robot(key_event: KeyEvent):
 
     # Prediction Update
     mu, sigma = prediction_update(mu, sigma, robot.u, 0.016)
-    print(mu)
-    print(sigma)
+    eigenvals,angle = sigma2transform(sigma[0:2,0:2])
+    print(f"eigenvals: {eigenvals}")
+    print(f"angle: {angle}")
+    print(f"mu: {mu}")
+    print(f"sigma: {sigma}")
     return RobotState(
         position=[float(robot.x[0]), float(robot.x[1])],
         heading=float(robot.x[2]),
         mu=mu.flatten().tolist(),  # Convert numpy array to list for JSON serialization
-        sigma=sigma.tolist()
+        sigma=sigma.tolist(),
+        eigenvals=eigenvals.tolist(),
+        angle=angle
     )

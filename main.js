@@ -49,15 +49,17 @@ function createEllipse(radiusX, radiusY) {
     const material = new THREE.LineBasicMaterial({ color: 0x0000ff }); // Blue color
     const ellipse = new THREE.Line(geometry, material);
     
-    // No rotation applied - ellipse is already in XY plane
-    // Points from EllipseCurve are in the XY plane by default
+    // Create a group to handle scaling and rotation independently
+    const ellipseGroup = new THREE.Group();
+    ellipseGroup.add(ellipse);
     
-    return ellipse;
+    return ellipseGroup;
 }
 
-// Create the ellipse with fixed dimensions
-const ellipse = createEllipse(1.2, 0.8); // Arbitrary fixed values
-car.add(ellipse); // Add the ellipse to the car group
+// Create the ellipse with initial dimensions
+const ellipseGroup = createEllipse(1, 1); // Start with unit circle
+// Add ellipse directly to scene instead of car group
+scene.add(ellipseGroup);
 
 // Set the car's initial rotation
 car.rotation.z = Math.PI / 2;
@@ -104,6 +106,9 @@ function initializeEKFState() {
         currentState.sigma[i][i] = 0.1;
     }
     currentState.sigma[2][2] = 0;  // Zero uncertainty in heading
+
+    currentState.eigenvals = [1, 1, 0];
+    currentState.angle = 0;
 }
 
 // Call initialization before animation loop
@@ -185,7 +190,9 @@ async function updateRobotState(key, eventType) {
                     position: currentState.position,
                     heading: currentState.heading,
                     mu: currentState.mu,
-                    sigma: currentState.sigma
+                    sigma: currentState.sigma,
+                    eigenvals: currentState.eigenvals || [1, 1],  // Default values if undefined
+                    angle: currentState.angle || 0  // Default value if undefined
                 }
             })
         });
@@ -201,17 +208,36 @@ async function updateRobotState(key, eventType) {
         car.position.y = data.position[1];
         car.rotation.z = data.heading;
         
-        // Update our tracked state including mu and sigma
+        // Update our tracked state
         currentState.position = data.position;
         currentState.heading = data.heading;
         currentState.mu = data.mu;
         currentState.sigma = data.sigma;
-        
+        currentState.eigenvals = data.eigenvals;
+        currentState.angle = data.angle;
+
+        // Only update ellipse if eigenvals are present
+        if (data.eigenvals && data.eigenvals.length >= 2) {
+            // Update ellipse position to match car
+            ellipseGroup.position.x = car.position.x;
+            ellipseGroup.position.y = car.position.y;
+            
+            // Scale the ellipse based on eigenvalues
+            const scaleX = Math.sqrt(Math.abs(data.eigenvals[0])) * 0.5;
+            const scaleY = Math.sqrt(Math.abs(data.eigenvals[1])) * 0.5;
+            ellipseGroup.scale.set(scaleX, scaleY, 1);
+
+            // Rotation will now be independent of car's rotation
+            ellipseGroup.rotation.z = (data.angle * Math.PI) / 180;
+        }
+
         console.log('Updated State:', {
             position: data.position,
             heading: data.heading,
-            mu: data.mu.slice(0, 3),  // Log only robot state part
-            sigma: data.sigma.slice(0, 3).map(row => row.slice(0, 3))  // Log only robot state covariance
+            mu: data.mu.slice(0, 3),
+            sigma: data.sigma.slice(0, 3).map(row => row.slice(0, 3)),
+            eigenvals: data.eigenvals,
+            angle: data.angle
         });
     } catch (error) {
         console.error('Error updating robot state:', error);
