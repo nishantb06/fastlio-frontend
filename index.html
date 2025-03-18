@@ -1,49 +1,97 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Car Simulation</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+
         .legend {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 0;
+            right: 0;
             background: rgba(255, 255, 255, 0.9);
             padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px 0 0 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             font-family: Arial, sans-serif;
             font-size: 14px;
             line-height: 1.5;
+            width: 300px;
+            height: 100vh;
+            overflow-y: auto;
+            border-left: 1px solid #ccc;
+            transition: transform 0.3s ease;
         }
+
+        .legend.collapsed {
+            transform: translateX(300px);
+        }
+
         .legend h2 {
             margin: 0 0 10px 0;
             font-size: 16px;
         }
+
         .legend p {
             margin: 5px 0;
         }
+
         .red-text {
             color: #ff0000;
             font-weight: bold;
         }
+
         kbd {
             background-color: #f7f7f7;
             border: 1px solid #ccc;
             border-radius: 3px;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
             color: #333;
             display: inline-block;
             font-size: 12px;
             padding: 2px 6px;
             margin: 0 2px;
         }
+
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: #3a7bc8;
+        }
+
+        .toggle-btn:active {
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            transform: translateY(1px);
+        }
     </style>
 </head>
+
 <body>
-    <div class="legend" style="width: 300px; height: 100vh; position: fixed; right: 0; top: 0; overflow-y: auto; margin: 0; border-left: 1px solid #ccc;">
-        <h1>2D Car Simulator for Fast-LIO SLAM</h2>
+    <button class="toggle-btn" id="toggleSidebar">Menu</button>
+
+    <div class="legend" id="sidebar">
+        <h1>2D Car Simulator for Fast-LIO SLAM</h1>
         <p>Controls:</p>
         <p><kbd>Up Arrow</kbd> - Move Forward</p>
         <p><kbd>Down Arrow</kbd> - Move Backward</p>
@@ -51,16 +99,36 @@
         <p><kbd>Right Arrow</kbd> - Turn Right</p>
         <p>Note: The <span class="red-text">red</span> part is the front of the car</p>
         <p>Grid size: One box is 10 pixel by 10 pixel</p>
-        <h2>Notice:</h1>
+        <h2>Notice:</h2>
         <ol>
             <li>The ellipses represent the uncertainty of the landmark and the robot</li>
-            <li>Even if the robot does not move , the uncertainty increase due to the noise in the motion model</li>
+            <li>Even if the robot does not move, the uncertainty increase due to the noise in the motion model</li>
             <li>When the car passes by a landmark for the first time, it passes on its uncertainty to the landmark</li>
-            <li>If the car passes by a landmark for the second time, the uncertainty of the car is reduced due to measurement. Coming back to the same landmark has helped the car to reduce the uncertainty in its own position</li>
-            <li>If a car is not moving, but a landmark is within its field of view, the car's uncertainty will not increase much</li>
+            <li>If the car passes by a landmark for the second time, the uncertainty of the car is reduced due to
+                measurement. Coming back to the same landmark has helped the car to reduce the uncertainty in its own
+                position</li>
+            <li>If a car is not moving, but a landmark is within its field of view, the car's uncertainty will not
+                increase much</li>
         </ol>
         <h3> Made by <a href="https://nishantbhansali.com">Nishant Bhansali</a></h3>
     </div>
+
     <script type="module" src="main.js"></script>
+    <script>
+        document.getElementById('toggleSidebar').addEventListener('click', function () {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+
+            // Change button text based on sidebar state
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.getElementById('toggleSidebar');
+
+            if (sidebar.classList.contains('collapsed')) {
+                btn.textContent = 'Menu';
+            } else {
+                btn.textContent = 'Hide';
+            }
+        });
+    </script>
 </body>
+
 </html>
