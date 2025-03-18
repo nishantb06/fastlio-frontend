@@ -42,8 +42,8 @@
     </style>
 </head>
 <body>
-    <div class="legend">
-        <h2>2D Car Simulator for Fast-LIO SLAM</h2>
+    <div class="legend" style="width: 300px; height: 100vh; position: fixed; right: 0; top: 0; overflow-y: auto; margin: 0; border-left: 1px solid #ccc;">
+        <h1>2D Car Simulator for Fast-LIO SLAM</h2>
         <p>Controls:</p>
         <p><kbd>Up Arrow</kbd> - Move Forward</p>
         <p><kbd>Down Arrow</kbd> - Move Backward</p>
@@ -51,7 +51,15 @@
         <p><kbd>Right Arrow</kbd> - Turn Right</p>
         <p>Note: The <span class="red-text">red</span> part is the front of the car</p>
         <p>Grid size: One box is 10 pixel by 10 pixel</p>
+        <h2>Notice:</h1>
+        <ol>
+            <li>The ellipses represent the uncertainty of the landmark and the robot</li>
+            <li>Even if the robot does not move , the uncertainty increase due to the noise in the motion model</li>
+            <li>When the car passes by a landmark for the first time, it passes on its uncertainty to the landmark</li>
+            <li>If the car passes by a landmark for the second time, the uncertainty of the car is reduced due to measurement. Coming back to the same landmark has helped the car to reduce the uncertainty in its own position</li>
+            <li>If a car is not moving, but a landmark is within its field of view, the car's uncertainty will not increase much</li>
+        </ol>
     </div>
     <script type="module" src="main.js"></script>
 </body>
-</html> 
+</html>
