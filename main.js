@@ -102,10 +102,14 @@ function initializeEKFState() {
     );
     
     // Set initial covariance for robot state
-    for(let i = 0; i < 3; i++) {
-        currentState.sigma[i][i] = 0.1;
+    for(let i = 0; i < n_state + 2*n_landmarks; i++) {
+        currentState.sigma[i][i] = 100;
     }
-    currentState.sigma[2][2] = 0;  // Zero uncertainty in heading
+
+    for(let i = 0; i < n_state; i++) {
+        currentState.sigma[i][i] = 0.05;
+    }
+    // currentState.sigma[2][2] = 0;  // Zero uncertainty in heading
 
     currentState.eigenvals = [1, 1, 0];
     currentState.angle = 0;
