@@ -27,12 +27,54 @@ function createLandmark(radius = 0.2) {
     return new THREE.Mesh(geometry, material);
 }
 
-// Add landmarks to scene
+// After the landmark creation code, add this function
+function createLandmarkEllipse(radiusX = 0.3, radiusY = 0.2) {
+    const curve = new THREE.EllipseCurve(
+        0, 0,            // Center x, y
+        radiusX, radiusY,// xRadius, yRadius
+        0, 2 * Math.PI,  // startAngle, endAngle
+        false,           // clockwise
+        0                // rotation
+    );
+
+    const points = curve.getPoints(50);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ 
+        color: 0x006400,  // Dark green color
+        opacity: 0.8,
+        transparent: true 
+    });
+    const ellipse = new THREE.Line(geometry, material);
+    
+    // Create a group to handle scaling and rotation independently
+    const ellipseGroup = new THREE.Group();
+    ellipseGroup.add(ellipse);
+    
+    return ellipseGroup;
+}
+
+// Modify the landmark creation section to include ellipses
 const landmarkObjects = landmarks.map(([x, y]) => {
-    const landmark = createLandmark(0.4);
-    landmark.position.set(x, y, 0);
-    scene.add(landmark);
-    return landmark;
+    // Create landmark group to hold both circle and ellipse
+    const landmarkGroup = new THREE.Group();
+    
+    // Create and add the landmark circle
+    const landmarkCircle = createLandmark(0.4);
+    landmarkGroup.add(landmarkCircle);
+    
+    // Create and add the ellipse
+    const landmarkEllipse = createLandmarkEllipse();
+    landmarkGroup.add(landmarkEllipse);
+    
+    // Position the entire group
+    landmarkGroup.position.set(x, y, 0);
+    scene.add(landmarkGroup);
+    
+    return {
+        group: landmarkGroup,
+        circle: landmarkCircle,
+        ellipse: landmarkEllipse
+    };
 });
 
 // Create lines for landmark distances
