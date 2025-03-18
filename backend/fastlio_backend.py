@@ -98,8 +98,7 @@ def measurement_update(mu,sigma,zs):
     Hs = [np.zeros((2,mu.shape[0])) for lidx in range(n_landmarks)] # A list of matrices stored for use outside the measurement for loop
     for z in zs:
         (dist,phi,lidx) = z
-        print(f"lidx: {lidx}")
-        mu_landmark = mu[int(n_state+lidx*2):int(n_state+lidx*2+2)] # Get the estimated position of the landmark
+        mu_landmark = mu[n_state+lidx*2:n_state+lidx*2+2] # Get the estimated position of the landmark
         if np.isnan(mu_landmark[0]): # If the landmark hasn't been observed before, then initialize (lx,ly)
             mu_landmark[0] = rx + dist*np.cos(phi+theta) # lx, x position of landmark
             mu_landmark[1] = ry+ dist*np.sin(phi+theta) # ly, y position of landmark
@@ -111,11 +110,11 @@ def measurement_update(mu,sigma,zs):
         phi_est = np.arctan2(delta[1,0],delta[0,0])-theta; phi_est = np.arctan2(np.sin(phi_est),np.cos(phi_est)) # Estimated angled between robot heading and landmark
         z_est_arr = np.array([[dist_est],[phi_est]]) # Estimated observation, in numpy array
         z_act_arr = np.array([[dist],[phi]]) # Actual observation in numpy array
-        delta_zs[int(lidx)] = z_act_arr-z_est_arr # Difference between actual and estimated observation
+        delta_zs[lidx] = z_act_arr-z_est_arr # Difference between actual and estimated observation
 
         # Helper matrices in computing the measurement update
         Fxj = np.block([[Fx],[np.zeros((2,Fx.shape[1]))]])
-        Fxj[n_state:n_state+2,n_state+2*int(lidx):n_state+2*int(lidx)+2] = np.eye(2)
+        Fxj[n_state:n_state+2,n_state+2*lidx:n_state+2*lidx+2] = np.eye(2)
         H = np.array([[-delta[0,0]/np.sqrt(q),-delta[1,0]/np.sqrt(q),0,delta[0,0]/np.sqrt(q),delta[1,0]/np.sqrt(q)],\
                       [delta[1,0]/q,-delta[0,0]/q,-1,-delta[1,0]/q,+delta[0,0]/q]])
         H = H.dot(Fxj)
