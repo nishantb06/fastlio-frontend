@@ -150,6 +150,11 @@ let currentState = {
     sigma: null
 };
 
+// Add after the state tracking variables
+const FRAME_RATE = 60;
+const FRAME_INTERVAL = 1000 / FRAME_RATE;  // ~16.67ms
+let lastFrameTime = 0;
+
 // Initialize mu and sigma before animation loop
 function initializeEKFState() {
     // Initialize mu (state estimate)
@@ -223,25 +228,29 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
-// Animation loop
-function animate() {
+// Update the animation loop
+function animate(currentTime) {
     requestAnimationFrame(animate);
-    if (moveForward || moveBackward || turnLeft || turnRight) {
 
-        let activeKey = null;
-        if (moveForward) activeKey = 'ArrowUp';
-        else if (moveBackward) activeKey = 'ArrowDown';
-        if (turnLeft) activeKey = 'ArrowLeft';
-        else if (turnRight) activeKey = 'ArrowRight';
-        if (activeKey) {
-            updateRobotState(activeKey, 'keydown');
-        }
+    // Calculate time since last frame
+    const deltaTime = currentTime - lastFrameTime;
+
+    // Only update if enough time has passed (1/60th of a second)
+    if (deltaTime > FRAME_INTERVAL) {
+        // Update last frame time
+        lastFrameTime = currentTime - (deltaTime % FRAME_INTERVAL);
+
+        // Send update to backend regardless of key state
+        updateRobotState(null, 'frame_update');
     }
 
     renderer.render(scene, camera);
 }
 
-// Modify the updateRobotState function to handle mu and sigma
+// Start animation with timestamp
+animate(0);
+
+// Modify updateRobotState to handle frame updates
 async function updateRobotState(key, eventType) {
     try {
         const response = await fetch(`${API_URL}/update_robot`, {
@@ -250,8 +259,8 @@ async function updateRobotState(key, eventType) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                key: key,
-                type: eventType,
+                key: key || null,  // Will be null for frame updates
+                type: eventType,   // Will be 'frame_update' for non-key updates
                 current_state: {
                     position: currentState.position,
                     heading: currentState.heading,
@@ -259,7 +268,7 @@ async function updateRobotState(key, eventType) {
                     sigma: currentState.sigma,
                     eigenvals: currentState.eigenvals || [1, 1],
                     angle: currentState.angle || 0,
-                    landmarks: landmarks  // Send landmarks array to backend
+                    landmarks: landmarks
                 }
             })
         });
@@ -346,6 +355,3 @@ axesGeometry.setAttribute('position', new THREE.BufferAttribute(axesVertices, 3)
 const axesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
 const axes = new THREE.LineSegments(axesGeometry, axesMaterial);
 scene.add(axes);
-
-// Start the animation
-animate();

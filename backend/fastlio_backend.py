@@ -92,12 +92,12 @@ class RobotState(BaseModel):
     measurements: Optional[List[List[float]]] = None  # Make measurements optional with default None
 
 class KeyEvent(BaseModel):
-    key: str
-    type: str  # 'keydown' or 'keyup'
+    key: Optional[str]  # Make key optional
+    type: str  # 'keydown', 'keyup', or 'frame_update'
     current_state: RobotState
 
 class DifferentialDrive:
-    max_v = 2.0
+    max_v = 3.0
     max_omega = 2.0
     
     def __init__(self):
@@ -168,7 +168,11 @@ async def update_robot(key_event: KeyEvent):
     mu = np.array(key_event.current_state.mu).reshape(-1, 1)
     sigma = np.array(key_event.current_state.sigma)
     
-    robot.update_controls(key_event)
+    # Only update controls if this is a key event
+    if key_event.type in ['keydown', 'keyup']:
+        robot.update_controls(key_event)
+    
+    # Always move robot and update state
     robot.move_step(dt=0.016)  # Approximately 60fps
 
     landmarks = key_event.current_state.landmarks
@@ -176,7 +180,7 @@ async def update_robot(key_event: KeyEvent):
     
     # Prediction Update
     mu, sigma = prediction_update(mu, sigma, robot.u, 0.016)
-    eigenvals,angle = sigma2transform(sigma[0:2,0:2])
+    eigenvals, angle = sigma2transform(sigma[0:2,0:2])
     
     return RobotState(
         position=[float(robot.x[0]), float(robot.x[1])],
@@ -185,5 +189,5 @@ async def update_robot(key_event: KeyEvent):
         sigma=sigma.tolist(),
         eigenvals=eigenvals.tolist(),
         angle=angle,
-        measurements=zs  # Add measurements to response
+        measurements=zs
     )
