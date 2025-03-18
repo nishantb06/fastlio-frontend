@@ -4,6 +4,31 @@ import * as THREE from 'three';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff); // White background
 
+// Define landmarks
+const landmarks = [
+    [-4, -4], [-4, 8], [-8, -8], [-12, 8], 
+    [16, -8], [16, -4], [12, 4], [8, 4]
+];
+// const n_landmarks = landmarks.length;
+
+// Create landmarks visualization
+function createLandmark(radius = 0.2) {
+    const geometry = new THREE.CircleGeometry(radius, 32);
+    const material = new THREE.MeshBasicMaterial({ 
+        color: 0x00ffff,  // Cyan color (equivalent to RGB(0,255,255))
+        side: THREE.DoubleSide 
+    });
+    return new THREE.Mesh(geometry, material);
+}
+
+// Add landmarks to scene
+const landmarkObjects = landmarks.map(([x, y]) => {
+    const landmark = createLandmark(0.4);
+    landmark.position.set(x, y, 0);
+    scene.add(landmark);
+    return landmark;
+});
+
 // Camera setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 // Move camera further up to get top-down 2D view
