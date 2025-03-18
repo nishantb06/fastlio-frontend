@@ -178,7 +178,7 @@ let turnLeft = false;
 let turnRight = false;
 
 // Add these variables at the top level
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://13.127.92.35:80';
 let lastUpdateTime = 0;
 const UPDATE_INTERVAL = 16; // approximately 60fps
 
