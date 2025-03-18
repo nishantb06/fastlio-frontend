@@ -29,6 +29,37 @@ const landmarkObjects = landmarks.map(([x, y]) => {
     return landmark;
 });
 
+// Create lines for landmark distances
+const lineGeometry = new THREE.BufferGeometry();
+const lineMaterial = new THREE.LineBasicMaterial({ 
+    color: 0x808080,  // Grey color
+    opacity: 0.5,
+    transparent: true 
+});
+const landmarkLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+scene.add(landmarkLines);
+
+// Function to update landmark distance lines
+function updateLandmarkLines(measurements) {
+    const linePoints = [];
+    
+    measurements.forEach(([dist, phi, lidx, is_in_fov]) => {
+        if (is_in_fov === 1) {  // Check for 1.0 since we're getting floats from Python
+            // Add car position as start point
+            linePoints.push(car.position.x, car.position.y, 0);
+            // Add landmark position as end point
+            linePoints.push(landmarks[Math.floor(lidx)][0], landmarks[Math.floor(lidx)][1], 0);
+        }
+    });
+    
+    // Update line geometry
+    const positions = new Float32Array(linePoints);
+    landmarkLines.geometry.setAttribute('position', 
+        new THREE.BufferAttribute(positions, 3)
+    );
+    landmarkLines.geometry.attributes.position.needsUpdate = true;
+}
+
 // Camera setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 // Move camera further up to get top-down 2D view
@@ -220,8 +251,9 @@ async function updateRobotState(key, eventType) {
                     heading: currentState.heading,
                     mu: currentState.mu,
                     sigma: currentState.sigma,
-                    eigenvals: currentState.eigenvals || [1, 1],  // Default values if undefined
-                    angle: currentState.angle || 0  // Default value if undefined
+                    eigenvals: currentState.eigenvals || [1, 1],
+                    angle: currentState.angle || 0,
+                    landmarks: landmarks  // Send landmarks array to backend
                 }
             })
         });
@@ -237,7 +269,12 @@ async function updateRobotState(key, eventType) {
         car.position.y = data.position[1];
         car.rotation.z = data.heading;
         
-        // Update our tracked state
+        // Update landmark distance lines if measurements are provided
+        if (data.measurements && Array.isArray(data.measurements)) {
+            updateLandmarkLines(data.measurements);
+        }
+        
+        // Update tracked state
         currentState.position = data.position;
         currentState.heading = data.heading;
         currentState.mu = data.mu;

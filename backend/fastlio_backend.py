@@ -22,6 +22,7 @@ app.add_middleware(
 # ---> Robot Parameters
 n_state = 3 # Number of state variables
 n_landmarks = 1 # Number of landmarks
+robot_fov = 5 # Field of view of robot
 
 # ---> Noise parameters
 R = np.diag([0.002,0.002,0.0005]) # sigma_x, sigma_y, sigma_theta
@@ -33,6 +34,24 @@ sigma = np.zeros((n_state+2*n_landmarks,n_state+2*n_landmarks)) # State uncertai
 
 # ---> Helpful matrix
 Fx = np.block([[np.eye(3),np.zeros((n_state,2*n_landmarks))]]) # Used in both prediction and measurement updates
+
+
+def sim_measurement(x, landmarks):
+    '''
+    This function simulates a measurement between robot and landmark
+    Outputs:
+     - zs: list of lists [dist, phi, lidx, is_in_fov]
+    '''
+    rx, ry, rtheta = x[0], x[1], x[2]
+    zs = []  # List of measurements
+    for lidx, landmark in enumerate(landmarks):
+        lx, ly = landmark
+        dist = float(np.linalg.norm(np.array([lx-rx, ly-ry])))  # Convert to float
+        phi = float(np.arctan2(ly-ry, lx-rx) - rtheta)  # Convert to float
+        phi = float(np.arctan2(np.sin(phi), np.cos(phi)))  # Keep phi bounded
+        is_in_fov = dist < robot_fov
+        zs.append([dist, phi, float(lidx), float(is_in_fov)])  # Convert all values to float/list
+    return zs
 
 def prediction_update(mu, sigma, u, dt):
     rx,py,theta = mu[0],mu[1],mu[2]
@@ -69,6 +88,8 @@ class RobotState(BaseModel):
     sigma: List[List[float]]  # Covariance matrix
     eigenvals: List[float]  # Eigenvalues for uncertainty ellipse
     angle: float  # Angle of uncertainty ellipse
+    landmarks: Optional[List[List[float]]] = None  # Make landmarks optional with default None
+    measurements: Optional[List[List[float]]] = None  # Make measurements optional with default None
 
 class KeyEvent(BaseModel):
     key: str
@@ -150,18 +171,19 @@ async def update_robot(key_event: KeyEvent):
     robot.update_controls(key_event)
     robot.move_step(dt=0.016)  # Approximately 60fps
 
+    landmarks = key_event.current_state.landmarks
+    zs = sim_measurement(robot.x, landmarks)
+    
     # Prediction Update
     mu, sigma = prediction_update(mu, sigma, robot.u, 0.016)
     eigenvals,angle = sigma2transform(sigma[0:2,0:2])
-    print(f"eigenvals: {eigenvals}")
-    print(f"angle: {angle}")
-    print(f"mu: {mu}")
-    print(f"sigma: {sigma}")
+    
     return RobotState(
         position=[float(robot.x[0]), float(robot.x[1])],
         heading=float(robot.x[2]),
-        mu=mu.flatten().tolist(),  # Convert numpy array to list for JSON serialization
+        mu=mu.flatten().tolist(),
         sigma=sigma.tolist(),
         eigenvals=eigenvals.tolist(),
-        angle=angle
+        angle=angle,
+        measurements=zs  # Add measurements to response
     )
