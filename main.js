@@ -6,8 +6,14 @@ scene.background = new THREE.Color(0xffffff); // White background
 
 // Define landmarks
 const landmarks = [
-    [-4, -4], [-4, 8], [-8, -8], [-12, 8], 
-    [16, -8], [16, -4], [12, 4], [8, 4]
+    [8, 0],    // Right
+    [5.66, 5.66],   // Top right
+    [0, 8],    // Top
+    [-5.66, 5.66],  // Top left
+    [-8, 0],   // Left
+    [-5.66, -5.66], // Bottom left
+    [0, -8],   // Bottom
+    [5.66, -5.66]   // Bottom right
 ];
 // const n_landmarks = landmarks.length;
 
