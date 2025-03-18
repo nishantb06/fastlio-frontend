@@ -142,7 +142,7 @@ const UPDATE_INTERVAL = 16; // approximately 60fps
 
 // Add state tracking variables at the top level
 const n_state = 3;
-const n_landmarks = 1;
+const n_landmarks = 8;
 let currentState = {
     position: [0, 0],
     heading: Math.PI/2,

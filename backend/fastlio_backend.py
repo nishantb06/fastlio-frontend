@@ -21,7 +21,7 @@ app.add_middleware(
 
 # ---> Robot Parameters
 n_state = 3 # Number of state variables
-n_landmarks = 1 # Number of landmarks
+n_landmarks = 8 # Number of landmarks
 robot_fov = 5 # Field of view of robot
 
 # ---> Noise parameters
@@ -79,8 +79,58 @@ def sigma2transform(sigma):
     angle = 180.*np.arctan2(eigenvecs[1][0],eigenvecs[0][0])/np.pi # Find the angle of rotation for the first eigenvalue
     return eigenvals, angle
 
-def measurement_update(mu, sigma, z, R):
+def measurement_update(mu,sigma,zs):
+    '''
+    This function performs the measurement step of the EKF. Using the linearized observation model, it
+    updates both the state estimate mu and the state uncertainty sigma based on range and bearing measurements
+    that are made between robot and landmarks.
+    Inputs:
+     - mu: state estimate (robot pose and landmark positions)
+     - sigma: state uncertainty (covariance matrix)
+     - zs: list of 3-tuples, (dist,phi,lidx) from measurement function
+    Outpus:
+     - mu: updated state estimate
+     - sigma: updated state uncertainty
+    '''
+    rx,ry,theta = mu[0,0],mu[1,0],mu[2,0] # robot 
+    delta_zs = [np.zeros((2,1)) for lidx in range(n_landmarks)] # A list of how far an actual measurement is from the estimate measurement
+    Ks = [np.zeros((mu.shape[0],2)) for lidx in range(n_landmarks)] # A list of matrices stored for use outside the measurement for loop
+    Hs = [np.zeros((2,mu.shape[0])) for lidx in range(n_landmarks)] # A list of matrices stored for use outside the measurement for loop
+    for z in zs:
+        (dist,phi,lidx) = z
+        print(f"lidx: {lidx}")
+        mu_landmark = mu[int(n_state+lidx*2):int(n_state+lidx*2+2)] # Get the estimated position of the landmark
+        if np.isnan(mu_landmark[0]): # If the landmark hasn't been observed before, then initialize (lx,ly)
+            mu_landmark[0] = rx + dist*np.cos(phi+theta) # lx, x position of landmark
+            mu_landmark[1] = ry+ dist*np.sin(phi+theta) # ly, y position of landmark
+            mu[n_state+lidx*2:n_state+lidx*2+2] = mu_landmark # Save these values to the state estimate mu
+        delta  = mu_landmark - np.array([[rx],[ry]]) # Helper variable
+        q = np.linalg.norm(delta)**2 # Helper variable
+
+        dist_est = np.sqrt(q) # Distance between robot estimate and and landmark estimate, i.e., distance estimate
+        phi_est = np.arctan2(delta[1,0],delta[0,0])-theta; phi_est = np.arctan2(np.sin(phi_est),np.cos(phi_est)) # Estimated angled between robot heading and landmark
+        z_est_arr = np.array([[dist_est],[phi_est]]) # Estimated observation, in numpy array
+        z_act_arr = np.array([[dist],[phi]]) # Actual observation in numpy array
+        delta_zs[int(lidx)] = z_act_arr-z_est_arr # Difference between actual and estimated observation
+
+        # Helper matrices in computing the measurement update
+        Fxj = np.block([[Fx],[np.zeros((2,Fx.shape[1]))]])
+        Fxj[n_state:n_state+2,n_state+2*int(lidx):n_state+2*int(lidx)+2] = np.eye(2)
+        H = np.array([[-delta[0,0]/np.sqrt(q),-delta[1,0]/np.sqrt(q),0,delta[0,0]/np.sqrt(q),delta[1,0]/np.sqrt(q)],\
+                      [delta[1,0]/q,-delta[0,0]/q,-1,-delta[1,0]/q,+delta[0,0]/q]])
+        H = H.dot(Fxj)
+        Hs[lidx] = H # Added to list of matrices
+        Ks[lidx] = sigma.dot(np.transpose(H)).dot(np.linalg.inv(H.dot(sigma).dot(np.transpose(H)) + Q)) # Add to list of matrices
+    # After storing appropriate matrices, perform measurement update of mu and sigma
+    mu_offset = np.zeros(mu.shape) # Offset to be added to state estimate
+    sigma_factor = np.eye(sigma.shape[0]) # Factor to multiply state uncertainty
+    for lidx in range(n_landmarks):
+        mu_offset += Ks[lidx].dot(delta_zs[lidx]) # Compute full mu offset
+        sigma_factor -= Ks[lidx].dot(Hs[lidx]) # Compute full sigma factor
+    mu = mu + mu_offset # Update state estimate
+    sigma = sigma_factor.dot(sigma) # Update state uncertainty
     return mu,sigma
+
 class RobotState(BaseModel):
     position: List[float]  # [x, y]
     heading: float  # theta
@@ -168,6 +218,9 @@ async def update_robot(key_event: KeyEvent):
     mu = np.array(key_event.current_state.mu).reshape(-1, 1)
     sigma = np.array(key_event.current_state.sigma)
     
+    # replace 0 with np.nan after the n_state
+    mu[n_state:] = np.where(mu[n_state:] == 0, np.nan, mu[n_state:])
+
     # Only update controls if this is a key event
     if key_event.type in ['keydown', 'keyup']:
         robot.update_controls(key_event)
@@ -177,11 +230,14 @@ async def update_robot(key_event: KeyEvent):
 
     landmarks = key_event.current_state.landmarks
     zs = sim_measurement(robot.x, landmarks)
-    
+    zs_in_fov = [(z[0],z[1],int(z[2])) for z in zs if z[3] == 1]
     # Prediction Update
     mu, sigma = prediction_update(mu, sigma, robot.u, 0.016)
+    mu, sigma = measurement_update(mu, sigma, zs_in_fov)
     eigenvals, angle = sigma2transform(sigma[0:2,0:2])
     
+    # replace np.nan with 0 in mu
+    mu[np.isnan(mu)] = 0
     return RobotState(
         position=[float(robot.x[0]), float(robot.x[1])],
         heading=float(robot.x[2]),
