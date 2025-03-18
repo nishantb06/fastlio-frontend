@@ -130,15 +130,32 @@ def measurement_update(mu,sigma,zs):
     sigma = sigma_factor.dot(sigma) # Update state uncertainty
     return mu,sigma
 
+def show_landmark_estimate(mu,sigma,env):
+    '''
+    Visualize estimated position and uncertainty of a landmark
+    '''
+    for lidx in range(n_landmarks): # For each landmark location
+        lx,ly,lsigma = mu[n_state+lidx*2], mu[n_state+lidx*2+1], sigma[n_state+lidx*2:n_state+lidx*2+2,n_state+lidx*2:n_state+lidx*2+2]
+        if ~np.isnan(lx): # If the landmark has been observed
+            p_pixel = env.position2pixel((lx,ly)) # Transform landmark location to pygame surface pixel coordinates
+            eigenvals,angle = sigma2transform(lsigma) # Get eigenvalues and rotation angle of covariance of landmark
+            if np.max(eigenvals)<15: # Only visualize when the maximum uncertainty is below some threshold
+                # sigma_pixel = max(env.dist2pixellen(eigenvals[0]),5), max(env.dist2pixellen(eigenvals[1]),5) # Convert eigenvalue units from meters to pixels
+                # show_uncertainty_ellipse(env,p_pixel,sigma_pixel,angle) # Show the ellipse
+                pass
+
 class RobotState(BaseModel):
     position: List[float]  # [x, y]
     heading: float  # theta
     mu: List[float]  # State estimate
     sigma: List[List[float]]  # Covariance matrix
-    eigenvals: List[float]  # Eigenvalues for uncertainty ellipse
-    angle: float  # Angle of uncertainty ellipse
+    eigenvals: List[float]  # Eigenvalues for robot uncertainty ellipse
+    angle: float  # Angle for robot uncertainty ellipse
     landmarks: Optional[List[List[float]]] = None  # Make landmarks optional with default None
     measurements: Optional[List[List[float]]] = None  # Make measurements optional with default None
+    # Add new fields for landmark uncertainty
+    landmark_eigenvals: List[List[float]]  # List of eigenvalues for each landmark
+    landmark_angles: List[float]  # List of angles for each landmark uncertainty ellipse
 
 class KeyEvent(BaseModel):
     key: Optional[str]  # Make key optional
@@ -235,8 +252,26 @@ async def update_robot(key_event: KeyEvent):
     mu, sigma = measurement_update(mu, sigma, zs_in_fov)
     eigenvals, angle = sigma2transform(sigma[0:2,0:2])
     
+    # Calculate uncertainty ellipses for landmarks
+    landmark_eigenvals = []
+    landmark_angles = []
+    
+    for lidx in range(n_landmarks):
+        lx, ly = mu[n_state+lidx*2], mu[n_state+lidx*2+1]
+        if not np.isnan(lx):  # If landmark has been observed
+            lsigma = sigma[n_state+lidx*2:n_state+lidx*2+2, n_state+lidx*2:n_state+lidx*2+2]
+            evals, angle = sigma2transform(lsigma)
+            # multiply evals by 10
+            evals = evals * 20
+            landmark_eigenvals.append(evals.tolist())
+            landmark_angles.append(float(angle))
+        else:
+            landmark_eigenvals.append([0, 0])  # Zero uncertainty for unobserved landmarks
+            landmark_angles.append(0.0)
+
     # replace np.nan with 0 in mu
     mu[np.isnan(mu)] = 0
+    
     return RobotState(
         position=[float(robot.x[0]), float(robot.x[1])],
         heading=float(robot.x[2]),
@@ -244,5 +279,7 @@ async def update_robot(key_event: KeyEvent):
         sigma=sigma.tolist(),
         eigenvals=eigenvals.tolist(),
         angle=angle,
-        measurements=zs
+        measurements=zs,
+        landmark_eigenvals=landmark_eigenvals,
+        landmark_angles=landmark_angles
     )

@@ -222,6 +222,10 @@ function initializeEKFState() {
 
     currentState.eigenvals = [1, 1, 0];
     currentState.angle = 0;
+    
+    // Initialize new fields
+    currentState.landmark_eigenvals = Array(n_landmarks).fill([0, 0]);
+    currentState.landmark_angles = Array(n_landmarks).fill(0);
 }
 
 // Call initialization before animation loop
@@ -310,7 +314,10 @@ async function updateRobotState(key, eventType) {
                     sigma: currentState.sigma,
                     eigenvals: currentState.eigenvals || [1, 1],
                     angle: currentState.angle || 0,
-                    landmarks: landmarks
+                    landmarks: landmarks,
+                    // Add initial values for new fields
+                    landmark_eigenvals: currentState.landmark_eigenvals || Array(n_landmarks).fill([0, 0]),
+                    landmark_angles: currentState.landmark_angles || Array(n_landmarks).fill(0)
                 }
             })
         });
@@ -331,28 +338,41 @@ async function updateRobotState(key, eventType) {
             updateLandmarkLines(data.measurements);
         }
         
-        // Update tracked state
+        // Update the state with new landmark uncertainty data
         currentState.position = data.position;
         currentState.heading = data.heading;
         currentState.mu = data.mu;
         currentState.sigma = data.sigma;
         currentState.eigenvals = data.eigenvals;
         currentState.angle = data.angle;
+        currentState.landmark_eigenvals = data.landmark_eigenvals;
+        currentState.landmark_angles = data.landmark_angles;
 
-        // Only update ellipse if eigenvals are present
+        // Update robot ellipse
         if (data.eigenvals && data.eigenvals.length >= 2) {
-            // Update ellipse position to match car
             ellipseGroup.position.x = car.position.x;
             ellipseGroup.position.y = car.position.y;
-            
-            // Scale the ellipse based on eigenvalues
             const scaleX = Math.sqrt(Math.abs(data.eigenvals[0])) * 0.5;
             const scaleY = Math.sqrt(Math.abs(data.eigenvals[1])) * 0.5;
             ellipseGroup.scale.set(scaleX, scaleY, 1);
-
-            // Rotation will now be independent of car's rotation
             ellipseGroup.rotation.z = (data.angle * Math.PI) / 180;
         }
+
+        // Update landmark ellipses
+        landmarkObjects.forEach((landmarkObj, idx) => {
+            const eigenvals = data.landmark_eigenvals[idx];
+            const angle = data.landmark_angles[idx];
+            
+            if (eigenvals[0] > 0 || eigenvals[1] > 0) {
+                const scaleX = Math.sqrt(Math.abs(eigenvals[0])) * 0.5;
+                const scaleY = Math.sqrt(Math.abs(eigenvals[1])) * 0.5;
+                landmarkObj.ellipse.scale.set(scaleX, scaleY, 1);
+                landmarkObj.ellipse.rotation.z = (angle * Math.PI) / 180;
+                landmarkObj.ellipse.visible = true;
+            } else {
+                landmarkObj.ellipse.visible = false;
+            }
+        });
 
         console.log('Updated State:', {
             position: data.position,
@@ -397,3 +417,55 @@ axesGeometry.setAttribute('position', new THREE.BufferAttribute(axesVertices, 3)
 const axesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
 const axes = new THREE.LineSegments(axesGeometry, axesMaterial);
 scene.add(axes);
+
+function drawUncertaintyEllipse(ctx, x, y, eigenvals, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle * Math.PI / 180); // Convert angle to radians
+    
+    // Scale factors for the ellipse
+    const scaleX = Math.sqrt(Math.max(eigenvals[0], 0)) * 50; // Scale factor for visualization
+    const scaleY = Math.sqrt(Math.max(eigenvals[1], 0)) * 50;
+    
+    // Draw ellipse
+    ctx.beginPath();
+    ctx.ellipse(0, 0, scaleX, scaleY, 0, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.stroke();
+    
+    ctx.restore();
+}
+
+function drawScene(state) {
+    // ... existing drawing code ...
+    
+    // Draw robot uncertainty ellipse
+    drawUncertaintyEllipse(
+        ctx, 
+        state.position[0] * scale, 
+        state.position[1] * scale, 
+        state.eigenvals, 
+        state.angle
+    );
+    
+    // Draw landmark uncertainty ellipses
+    if (state.landmarks) {
+        state.landmarks.forEach((landmark, idx) => {
+            const eigenvals = state.landmark_eigenvals[idx];
+            const angle = state.landmark_angles[idx];
+            
+            // Only draw if the landmark has been observed (eigenvals > 0)
+            if (eigenvals[0] > 0 || eigenvals[1] > 0) {
+                drawUncertaintyEllipse(
+                    ctx,
+                    landmark[0] * scale,
+                    landmark[1] * scale,
+                    eigenvals,
+                    angle
+                );
+            }
+        });
+    }
+    
+    // ... rest of drawing code ...
+}
