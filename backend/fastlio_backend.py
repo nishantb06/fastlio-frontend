@@ -11,7 +11,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://your-amplify-domain.amplifyapp.com",  # Replace with your domain
+        "https://fastlio-backend.nishantbhansali.com",  # Replace with your domain
         "http://localhost:5173",  # For local development
     ],
     allow_credentials=True,
