@@ -1,0 +1,44 @@
+name: ECS Force Redeployment
+
+on:
+  # Trigger manually from the GitHub Actions tab
+  workflow_dispatch:
+
+  # Optionally trigger when the ECR push workflow completes
+  workflow_run:
+    workflows: ["Public ECR Push Pipeline"]
+    types:
+      - completed
+    branches: ["main"]
+
+env:
+  AWS_REGION: us-east-1
+  ECS_CLUSTER: FastlioBackendClusterV4
+  ECS_SERVICE: FastlioBackendServiceV2
+
+jobs:
+  deploy-to-ecs:
+    runs-on: ubuntu-latest
+    # Only run if the triggering workflow succeeded (if triggered by workflow_run)
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Force new deployment on ECS service
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} \
+                                --service ${{ env.ECS_SERVICE }} \
+                                --force-new-deployment
+
+      - name: Wait for deployment to complete
+        run: |
+          echo "Waiting for service to stabilize..."
+          aws ecs wait services-stable --cluster ${{ env.ECS_CLUSTER }} \
+                                      --services ${{ env.ECS_SERVICE }}
+          echo "Deployment completed successfully!"
