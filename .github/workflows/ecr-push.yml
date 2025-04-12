@@ -9,7 +9,7 @@ on:
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: fastlio-backend
-  ECR_REGISTRY: 751197368820.dkr.ecr.ap-south-1.amazonaws.com
+  ECR_REGISTRY: public.ecr.aws/o0r9z0k0
 
 jobs:
   build-and-push:
