@@ -290,6 +290,10 @@ async def update_robot(key_event: KeyEvent):
 async def health():
     return {"status": "ok"}
 
+@app.get("/FastlioBackendServiceV2")
+async def health():
+    return {"status": "ok john"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
