@@ -13,6 +13,8 @@ app.add_middleware(
     allow_origins=[
         "https://fastlio-backend.nishantbhansali.com",  # Replace with your domain
         "http://localhost:5173",  # For local development
+        "https://fastlio-backend.nishantbhansali.com/FastlioBackendServiceV2",
+        "https://fastlio.nishantbhansali.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
