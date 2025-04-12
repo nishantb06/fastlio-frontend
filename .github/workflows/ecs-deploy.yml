@@ -1,4 +1,4 @@
-name: ECS Force Redeployment
+name: ECS Redeployment
 
 on:
   # Trigger manually from the GitHub Actions tab
