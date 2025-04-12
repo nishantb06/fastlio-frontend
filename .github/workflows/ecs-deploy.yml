@@ -12,7 +12,7 @@ on:
     branches: ["main"]
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ap-south-1
   ECS_CLUSTER: FastlioBackendClusterV4
   ECS_SERVICE: FastlioBackendServiceV2
 
