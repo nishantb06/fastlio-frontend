@@ -1,0 +1,33 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:UpdateService",
+                "ecs:DescribeServices"
+            ],
+            "Resource": [
+                "arn:aws:ecs:*:*:service/FastlioBackendClusterV4/FastlioBackendServiceV2"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:DescribeTaskDefinition"
+            ],
+            "Resource": [
+                "arn:aws:ecs:*:*:task-definition/FastlioBackendTaskDefinitionV2:*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:ListClusters",
+                "ecs:ListServices",
+                "ecs:ListTaskDefinitions"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

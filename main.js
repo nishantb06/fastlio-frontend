@@ -178,7 +178,7 @@ let turnLeft = false;
 let turnRight = false;
 
 // Add these variables at the top level
-const API_URL = 'https://fastlio-backend.nishantbhansali.com';
+const API_URL = 'https://fastlio-backend.nishantbhansali.com/FastlioBackendServiceV2';
 let lastUpdateTime = 0;
 const UPDATE_INTERVAL = 16; // approximately 60fps
 

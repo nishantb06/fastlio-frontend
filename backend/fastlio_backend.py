@@ -224,6 +224,7 @@ class DifferentialDrive:
 robot = DifferentialDrive()
 
 @app.post("/update_robot")
+@app.post("/FastlioBackendServiceV2/update_robot")
 async def update_robot(key_event: KeyEvent):
     # Update robot state from frontend
     robot.x[0] = key_event.current_state.position[0]
