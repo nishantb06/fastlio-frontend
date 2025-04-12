@@ -292,7 +292,7 @@ async def health():
 
 @app.get("/FastlioBackendServiceV2")
 async def health():
-    return {"status": "ok john"}
+    return {"status": "ok john testing cd pipeline"}
 
 if __name__ == "__main__":
     import uvicorn
